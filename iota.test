@@ -1,0 +1,68 @@
+int port
+String url
+print("Enter url and sensor port")
+read(url)
+read(port)
+
+Connection conn(url)
+Sensor<float> humiditySens(conn.at(port))
+float humidityThreshold
+print("Enter humidity threshold")
+read(humidityThreshold)
+
+def triggerActuatorForThreshold( Sensor<float> s, float th, Actuator ac) {(
+    int t1 = Timestamp()
+    while( s.get_data() < th) {
+        // prints humidity every 1 minute
+        int t2 = Timestamp()
+        if( (t2 - t1) - ((t2 - t1) / 3600000) * 3600000 == 0) {
+            print("Humidity in air is: ")
+            float f = s.get_data() * 100
+            print(f)
+            print("%")
+        }
+    }
+    // actuator triggered
+    ac.send_data(1)
+    return
+)}
+
+int actuatorPort
+print("Enter the port for the humidity sensor actuator")
+read(actuatorPort)
+Actuator actHum(conn.at(actuatorPort))
+triggerActuatorForThreshold(humiditySensor, humidityThreshold, actHum)
+
+if(actHum.get_data() == 0) {
+    // the humidity actuator has NOT been activated
+    print("Hardware malfunction, the actuator was not activated")
+    def tryNewActuator(Connection conn) {(
+        print("Provide a new actuator port for backup actuator")
+        int backUpPort
+        Actuator backUpActuator(conn.at(backUpPort))
+        return backUpActuator
+    )}
+    Actuator tryAgain(conn.at(port))
+    tryAgain.send_data(1)
+    if(tryAgain.get_data() != 1) {
+    print("Hardware Malfunction")
+}
+else {
+    // actuator was successfully turned on
+    //wait until humidity goes back to normal
+    while(humiditySens.get_data() >= humidityThreshold) {}
+    // turn off actuator
+    humAct.send_data(0)
+}
+print("Enter the 10 temperature instances as measured through the day: \n")
+sum = 0.0
+
+for(int i = 0, i < 10, i = i + 1) {
+    float temp
+    read(temp)
+    sum = sum + temp
+}
+
+print("The average of the temperatures you entered: ")
+avg = sum / 10
+print(avg)
